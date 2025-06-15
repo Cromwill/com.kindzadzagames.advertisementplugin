@@ -1,5 +1,7 @@
+#if YABBI_AD
 using YabbiSDK.Api;
 using SspnetSDK.Unfiled;
+#endif
 
 namespace KinDzaDzaGames.AdvertisementPlugin
 {
@@ -14,7 +16,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             Yabbi.SetInterstitialCallbacks(this);
 #endif
         }
-
+        #if YABBI_AD
         public void OnInterstitialLoaded(AdPayload adPayload)
         {
             AddLog("OnInterstitialLoaded");
@@ -39,8 +41,16 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         {
             AddLog("OnInterstitialClosed");
         }
+#endif
 
         protected override string GetPlacementName() => AdvertisingSettings.YabbiAds.yabbiInterstitialUnitID;
-        protected override int GetAdType() => Yabbi.Interstitial;
+        protected override int GetAdType()
+        {
+#if YABBI_AD
+            return Yabbi.Interstitial;
+#else
+            return 0;
+#endif
+        }
     }
 }

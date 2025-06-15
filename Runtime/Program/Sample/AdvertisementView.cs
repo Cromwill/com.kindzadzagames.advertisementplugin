@@ -1,7 +1,10 @@
 using TMPro;
 using UnityEngine;
-using YabbiSDK.Api;
 using UnityEngine.UI;
+
+#if YABBI_AD
+using YabbiSDK.Api;
+#endif
 
 namespace KinDzaDzaGames.AdvertisementPlugin
 {
@@ -51,9 +54,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected virtual void ShowButtonClick()
         {
+#if YABBI_AD
             if (Yabbi.IsAdLoaded(GetAdType(), GetPlacementName()))
                 Yabbi.ShowAd(GetAdType(), GetPlacementName());
             else
+#endif
                 ShowNotLoadedADWarning();
         }
 
@@ -73,6 +78,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         private void LoadButtonClick()
         {
+#if YABBI_AD
             if (Yabbi.CanLoadAd(GetAdType(), GetPlacementName()))
             {
                 AddLog("Ad start to load.");
@@ -82,11 +88,14 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             {
                 AddLog("SDK can't start load ad.");
             }
+#endif
         }
 
         private void DestroyButtonClick()
         {
+#if YABBI_AD
             Yabbi.DestroyAd(GetAdType(), GetPlacementName());
+#endif
             AddLog("Ad was destroyed.");
         }
     }

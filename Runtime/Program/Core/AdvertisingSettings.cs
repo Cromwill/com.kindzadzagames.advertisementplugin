@@ -2,6 +2,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 {
     public static class AdvertisingSettings
     {
+        public class EditorTest
+        {
+            public const string Test = "9999";
+        }
+
         public class YabbiAds
         {
             public const string publisherID = "65057899-a16a-4877-989b-38c432a7fa15";

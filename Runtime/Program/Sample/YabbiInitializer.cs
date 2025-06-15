@@ -1,17 +1,22 @@
 using UnityEngine;
-using YabbiSDK.Api;
 using Newtonsoft.Json;
-using SspnetSDK.Unfiled;
 using System.Collections;
-using YabbiSDK.ConsentManagerSDK.Api;
 using KinDzaDzaGames.AdvertisementPlugin.DTO;
 using KinDzaDzaGames.AdvertisementPlugin.Utility;
+
+#if YABBI_AD
+using YabbiSDK.Api;
+using SspnetSDK.Unfiled;
+using YabbiSDK.ConsentManagerSDK.Api;
 using SspnetSDK.ConsentManagerSDK.Unfiled;
-using System.Threading.Tasks;
+#endif
 
 namespace KinDzaDzaGames.AdvertisementPlugin
 {
-    public class YabbiInitializer : MonoBehaviour, IInitializationListener
+    public class YabbiInitializer : MonoBehaviour
+#if YABBI_AD
+        , IInitializationListener
+#endif
     {
 #if UNITY_WEBGL
         private const string Platform = "webgl";
@@ -30,7 +35,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         [SerializeField] private Store _storeName;
         [SerializeField] private int _bundleId;
 
+#if YABBI_AD
         ConsentManager _consentManager = new ConsentManager();
+#endif
         private AdvertisementAPI _api;
         private AppData _appData;
         private PreloadService _preloadService;
@@ -53,7 +60,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         {
             if (Application.internetReachability == NetworkReachability.NotReachable)
                 yield return new WaitWhile(() => Application.internetReachability == NetworkReachability.NotReachable);
-
+#if YABBI_AD
 #if BUILD_DEBUG
             Yabbi.EnableDebug(true);
 #endif
@@ -80,6 +87,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                     _consentManager.ShowConsentWindow();
                 }
             }
+#endif
 
             _aDSNavigationView.Construct();
 
@@ -98,11 +106,13 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #endif
         }
 
+#if YABBI_AD
         public void OnInitializeFailed(AdException error)
         {
 #if BUILD_DEBUG
             Debug.Log($"YABBI PLUGIN: yabbi initialization failed... Error: {error.Description}");
 #endif
         }
+#endif
     }
 }

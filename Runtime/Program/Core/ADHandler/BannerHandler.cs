@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.Scripting;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
 
 #if YABBI_AD
 using YabbiSDK.Api;
@@ -144,14 +145,19 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         }
 
         private
-#if YABBI_AD
+#if UNITY_EDITOR
+        PlaceOnScreen
+#elif YABBI_AD
         int
 #elif YANDEX_AD
         PlaceOnScreen
 #endif
         DeterminePosition() => _placeOnScreen switch
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            PlaceOnScreen.TopCenter => PlaceOnScreen.TopCenter,
+            _ => PlaceOnScreen.BottomCenter,
+#elif YABBI_AD
             PlaceOnScreen.TopLeft or PlaceOnScreen.TopCenter or PlaceOnScreen.TopRight => BannerPosition.TOP,
             _ => BannerPosition.BOTTOM,
 #elif YANDEX_AD
@@ -171,7 +177,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         {
 #if UNITY_EDITOR
             Debug.Log("Advertisement Info: banner settings setted.");
-# elif YABBI_AD
+#elif YABBI_AD
             Yabbi.SetBannerCustomSettings(new BannerSettings().SetRefreshIntervalSeconds(_switchADTime).SetShowCloseButton(_bannerCloseButtonVisibility).SetBannerPosition(DeterminePosition()));
 #elif YANDEX_AD
             _bannerSize = BannerAdSize.InlineSize((int)_widthSlider.value, (int)_heightSlider.value);
@@ -180,7 +186,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override string GetPlacementName()
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            return AdvertisingSettings.EditorTest.Test;
+#elif YABBI_AD
             return AdvertisingSettings.YabbiAds.yabbiBannerUnitID;
 #elif YANDEX_AD
             return AdvertisingSettings.YandexAds.Release.BannerUnitId;
@@ -189,10 +197,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool CanLoadAd()
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            return true;
+#elif YABBI_AD
             return Yabbi.CanLoadAd(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
-            return true;
+            return _banner == null;
 #endif
         }
 
@@ -216,7 +226,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool AdIsLoaded()
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            return true;
+#elif YABBI_AD
             return Yabbi.IsAdLoaded(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
             return _bannerLoaded;

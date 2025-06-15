@@ -73,7 +73,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override string GetPlacementName()
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            return AdvertisingSettings.EditorTest.Test;
+#elif YABBI_AD
             return AdvertisingSettings.YabbiAds.yabbiInterstitialUnitID;
 #elif YANDEX_AD
             return AdvertisingSettings.YandexAds.Release.InterstitialUnitId;
@@ -114,7 +116,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool CanLoadAd()
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            return true;
+#elif YABBI_AD
             return Yabbi.CanLoadAd(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
             return _interstitial == null;
@@ -132,7 +136,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool AdIsLoaded()
         {
-#if YABBI_AD
+#if UNITY_EDITOR
+            return true;
+#elif YABBI_AD
             return Yabbi.IsAdLoaded(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
             return _interstitial != null;
