@@ -133,7 +133,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YABBI_AD
             return _advertisingConfigs.RewardedUnitID;
 #elif YANDEX_AD
-            return AdvertisingSettings.YandexAds.Release.RewardUnitId;
+            return _advertisingConfigs.RewardedUnitID;
 #endif
         }
 
@@ -153,7 +153,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #if YABBI_AD
             Yabbi.LoadAd(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
-            _rewardedAdLoader.LoadAd(CreateAdRequest(AdvertisingSettings.YandexAds.Release.RewardUnitId));
+            _rewardedAdLoader.LoadAd(CreateAdRequest(GetPlacementName()));
 #endif
         }
 
@@ -230,12 +230,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             _preRewardAction?.Invoke();
         }
 
-        private void HandleAdFailedToLoad(object sender, AdFailedToLoadEventArgs args) => DropRewardActions();
+        private void HandleAdFailedToLoad(object sender, AdFailedToLoadEventArgs args) => CancelReward();
         private AdRequestConfiguration CreateAdRequest(string adUnitId) => new AdRequestConfiguration.Builder(adUnitId).Build();
         private void HandleAdClicked(object sender, EventArgs args) { }
         private void HandleAdShown(object sender, EventArgs args) { }
         private void HandleImpression(object sender, ImpressionData impressionData) { }
-        private void HandleAdFailedToShow(object sender, AdFailureEventArgs args) => DropRewardActions();
+        private void HandleAdFailedToShow(object sender, AdFailureEventArgs args) => CancelReward();
 
         private void HandleRewarded(object sender, Reward args)
         {

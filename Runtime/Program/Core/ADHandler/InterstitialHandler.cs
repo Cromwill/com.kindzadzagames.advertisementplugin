@@ -116,7 +116,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YABBI_AD
             return _advertisingConfigs.InterstitialUnitID;
 #elif YANDEX_AD
-            return AdvertisingSettings.YandexAds.Release.InterstitialUnitId;
+            return _advertisingConfigs.InterstitialUnitID;
 #endif
         }
 
@@ -147,6 +147,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         {
             yield return new WaitForSeconds(CheckBlockedDelay);
             Show();
+            _reloadCoroutine = null;
         }
 
         private void ReportClosure()
@@ -176,7 +177,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YABBI_AD
             Yabbi.LoadAd(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
-            _interstitialAdLoader.LoadAd(CreateAdRequest(AdvertisingSettings.YandexAds.Release.InterstitialUnitId));
+            _interstitialAdLoader.LoadAd(CreateAdRequest(GetPlacementName()));
 #endif
         }
 

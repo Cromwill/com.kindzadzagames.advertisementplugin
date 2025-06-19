@@ -23,6 +23,8 @@ namespace KinDzaDzaGames.AdvertisementPlugin
     {
         private const float RetryLoadAdDelay = 1f;
         private const float CheckBlockedDelay = 5f;
+        private const int BannerWidth = 320;
+        private const int BannerHeight = 50;
 
         private readonly int _switchADTime = 30;
         private readonly bool _bannerCloseButtonVisibility = false;
@@ -35,6 +37,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private PlaceOnScreen _placeOnScreen = PlaceOnScreen.BottomCenter;
         private Coroutine _checkBannerBlockCoroutine = null;
         private Coroutine _displayBannerCoroutine = null;
+        private Coroutine _reloadCoroutine = null;
         private List<IBannerBlocker> _adBlockers = new List<IBannerBlocker>();
         private bool _bannerLoaded = false;
 
@@ -166,6 +169,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                 _displayBannerCoroutine = null;
             }
 
+            if (_reloadCoroutine != null)
+            {
+                _coroutine.StopCoroutine(_reloadCoroutine);
+                _reloadCoroutine = null;
+            }
+
             if (AdIsLoaded())
                 DestroyAd();
         }
@@ -208,7 +217,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YABBI_AD
         int
 #elif YANDEX_AD
-        PlaceOnScreen
+        AdPosition
 #endif
         DeterminePosition() => _placeOnScreen switch
         {
@@ -219,7 +228,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             PlaceOnScreen.TopLeft or PlaceOnScreen.TopCenter or PlaceOnScreen.TopRight => BannerPosition.TOP,
             _ => BannerPosition.BOTTOM,
 #elif YANDEX_AD
-                PlaceOnScreen.TopLeft => AdPosition.TopLeft,
+
+            PlaceOnScreen.TopLeft or PlaceOnScreen.TopCenter or PlaceOnScreen.TopRight => AdPosition.TopCenter,
+            _ => AdPosition.BottomCenter,
+
+                /*PlaceOnScreen.TopLeft => AdPosition.TopLeft,
                 PlaceOnScreen.TopCenter => AdPosition.TopCenter,
                 PlaceOnScreen.TopRight => AdPosition.TopRight,
                 PlaceOnScreen.CenterLeft => AdPosition.CenterLeft,
@@ -227,7 +240,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                 PlaceOnScreen.CenterRight => AdPosition.CenterRight,
                 PlaceOnScreen.BottomLeft => AdPosition.BottomLeft,
                 PlaceOnScreen.BottomRight => AdPosition.BottomRight,
-                _ => AdPosition.BottomCenter,
+                _ => AdPosition.BottomCenter,*/
 #endif
         };
 
@@ -238,8 +251,22 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YABBI_AD
             Yabbi.SetBannerCustomSettings(new BannerSettings().SetRefreshIntervalSeconds(_switchADTime).SetShowCloseButton(_bannerCloseButtonVisibility).SetBannerPosition(DeterminePosition()));
 #elif YANDEX_AD
-            _bannerSize = BannerAdSize.InlineSize((int)_widthSlider.value, (int)_heightSlider.value);
+            _bannerSize = BannerAdSize.InlineSize(BannerWidth, BannerHeight);
 #endif
+        }
+
+        private IEnumerator ReloadAd()
+        {
+            yield return new WaitForSeconds(CheckBlockedDelay);
+
+            if (_displayBannerCoroutine != null)
+            {
+                _coroutine.StopCoroutine(_displayBannerCoroutine);
+                _displayBannerCoroutine = null;
+            }
+
+            Show(_placeOnScreen);
+            _reloadCoroutine = null;
         }
 
         protected override string GetPlacementName()
@@ -249,7 +276,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YABBI_AD
             return _advertisingConfigs.BannerUnitID;
 #elif YANDEX_AD
-            return AdvertisingSettings.YandexAds.Release.BannerUnitId;
+            return _advertisingConfigs.BannerUnitID;
 #endif
         }
 
@@ -269,7 +296,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #if YABBI_AD
             Yabbi.LoadAd(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
-            _banner = new Banner(AdvertisementSettings.BannerUnitId, _bannerSize, _bannerPosition);
+            _banner = new Banner(GetPlacementName(), _bannerSize, DeterminePosition());
 
             _banner.OnAdLoaded += HandleAdLoaded;
             _banner.OnAdFailedToLoad += HandleAdFailedToLoad;
@@ -327,7 +354,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         #region YABBI_AD
 #if YABBI_AD
         public void OnBannerLoaded(AdPayload adPayload) { }
-        public void OnBannerLoadFailed(AdPayload adPayload, AdException error) { }
+        public void OnBannerLoadFailed(AdPayload adPayload, AdException error) => _reloadCoroutine ??= _coroutine.StartCoroutine(ReloadAd());
         public void OnBannerShown(AdPayload adPayload) { }
         public void OnBannerShowFailed(AdPayload adPayload, AdException error) { }
         public void OnBannerClosed(AdPayload adPayload) { }
@@ -345,7 +372,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #if YANDEX_AD
         private AdRequest CreateAdRequest() => new AdRequest.Builder().Build();
         private void HandleAdLoaded(object sender, EventArgs args) => _bannerLoaded = true;
-        private void HandleAdFailedToLoad(object sender, AdFailureEventArgs args) { }
+        private void HandleAdFailedToLoad(object sender, AdFailureEventArgs args) => _reloadCoroutine ??= _coroutine.StartCoroutine(ReloadAd());
         private void HandleLeftApplication(object sender, EventArgs args) { }
         private void HandleReturnedToApplication(object sender, EventArgs args) { }
         private void HandleAdLeftApplication(object sender, EventArgs args) { }
@@ -353,7 +380,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         private void HandleImpression(object sender, ImpressionData impressionData)
         {
-            _bannerDisplayed = true;
+            _bannerShown = true;
             BannerDisplayed?.Invoke();
         }
 #endif
