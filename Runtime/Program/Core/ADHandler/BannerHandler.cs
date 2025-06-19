@@ -4,7 +4,6 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.Scripting;
 using System.Collections.Generic;
-using UnityEngine.UIElements;
 
 #if YABBI_AD
 using YabbiSDK.Api;
@@ -25,15 +24,18 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private const float RetryLoadAdDelay = 1f;
         private const float CheckBlockedDelay = 5f;
 
-        private readonly int _switchADTime = 20;
+        private readonly int _switchADTime = 30;
         private readonly bool _bannerCloseButtonVisibility = false;
+        private readonly AdvertisingConfigs _advertisingConfigs;
         private readonly ICoroutine _coroutine;
 
-        private bool _bannerDisplayed = false;
+        private bool _vip;
+        private bool _bannerShown = false;
+        private bool _bannerSuspended = false;
         private PlaceOnScreen _placeOnScreen = PlaceOnScreen.BottomCenter;
         private Coroutine _checkBannerBlockCoroutine = null;
         private Coroutine _displayBannerCoroutine = null;
-        private List<IAdBlocker> _adBlockers = new List<IAdBlocker>();
+        private List<IBannerBlocker> _adBlockers = new List<IBannerBlocker>();
         private bool _bannerLoaded = false;
 
 #if YANDEX_AD
@@ -41,17 +43,24 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private BannerAdSize _bannerSize;
 #endif
 
-        public BannerHandler(ICoroutine coroutine, int switchADTime, bool bannerCloseButtonVisibility, PlaceOnScreen bannerPlace)
+        public bool BannerShown => _bannerShown;
+
+        public event Action BannerDisplayed;
+        public event Action BannerHided;
+
+        public BannerHandler(AdvertisingConfigs advertisingConfigs, ICoroutine coroutine, int switchADTime, bool bannerCloseButtonVisibility, PlaceOnScreen bannerPlace, bool vip)
         {
+            _advertisingConfigs = advertisingConfigs ?? throw new ArgumentNullException(nameof(advertisingConfigs));
             _coroutine = coroutine ?? throw new ArgumentNullException(nameof(coroutine));
+            _vip = vip;
 
             _switchADTime = switchADTime;
             _bannerCloseButtonVisibility = bannerCloseButtonVisibility;
             _placeOnScreen = bannerPlace;
 
-#if UNITY_EDITOR
-            Debug.Log("Advertisement Info: banner handler inited.");
-# elif YABBI_AD
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
+            Debug.Log("Advertisement Plugin: banner handler inited.");
+#elif YABBI_AD
             Yabbi.SetBannerCallbacks(this);
 #endif
             SetBannerSettings();
@@ -59,72 +68,115 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         public void Dispose()
         {
-            DestroyAd();
+            DropAd();
+        }
+
+        public void ChangeSubscribeStatus(bool vip)
+        {
+            _vip = vip;
+
+            if (_vip)
+                DropAd();
         }
 
         public void Show(PlaceOnScreen placeOnScreen)
         {
-            if (_adBlockers.Count > 0)
+            if (_vip)
                 return;
 
             if (_placeOnScreen != placeOnScreen)
             {
                 _placeOnScreen = placeOnScreen;
                 SetBannerSettings();
+
+                DestroyAd();
+
+                if(_displayBannerCoroutine != null)
+                {
+                    _coroutine.StopCoroutine(_displayBannerCoroutine);
+                    _displayBannerCoroutine = null;
+                }
+
+                if (_checkBannerBlockCoroutine != null)
+                {
+                    _coroutine.StopCoroutine(_checkBannerBlockCoroutine);
+                    _checkBannerBlockCoroutine = null;
+                }
+
+                _bannerSuspended = false;
             }
+
+            if (_bannerShown || _bannerSuspended)
+                return;
 
             _displayBannerCoroutine ??= _coroutine.StartCoroutine(DisplayBanner());
         }
 
         public void Hide()
         {
-            if (_bannerDisplayed)
-            {
-                DestroyAd();
-                _bannerDisplayed = false;
-            }
-        }
+            DestroyAd();
 
-        public void SuspendBanner(IAdBlocker adBlocker)
-        {
-            _adBlockers.Add(adBlocker);
-
-            if(_displayBannerCoroutine != null)
+            if (_displayBannerCoroutine != null)
             {
                 _coroutine.StopCoroutine(_displayBannerCoroutine);
                 _displayBannerCoroutine = null;
             }
 
-            if(_bannerDisplayed)
+            if (_checkBannerBlockCoroutine != null)
+            {
+                _coroutine.StopCoroutine(_checkBannerBlockCoroutine);
+                _checkBannerBlockCoroutine = null;
+            }
+
+            _bannerSuspended = false;
+        }
+
+        public void SuspendBanner(IBannerBlocker adBlocker)
+        {
+            if (_vip)
+                return;
+
+            _adBlockers.Add(adBlocker);
+            _bannerSuspended = true;
+
+            if (_displayBannerCoroutine != null)
+            {
+                _coroutine.StopCoroutine(_displayBannerCoroutine);
+                _displayBannerCoroutine = null;
+            }
+
+            if(_bannerShown)
             {
                 DestroyAd();
-                _bannerDisplayed = false;
-                _checkBannerBlockCoroutine = _coroutine.StartCoroutine(WaitDisplayPermission());
+                _checkBannerBlockCoroutine ??= _coroutine.StartCoroutine(WaitDisplayPermission());
             }
         }
 
-        public void ChangePosition(PlaceOnScreen bannerPlace, bool reloadBanner = false)
+        private void DropAd()
         {
-            if (_placeOnScreen == bannerPlace && reloadBanner == false)
-                return;
-
-            if (reloadBanner && _bannerDisplayed)
+            if (_checkBannerBlockCoroutine != null)
             {
-                DestroyAd();
-                _bannerDisplayed = false;
+                _coroutine.StopCoroutine(_checkBannerBlockCoroutine);
+                _checkBannerBlockCoroutine = null;
             }
 
-            _placeOnScreen = bannerPlace;
-            SetBannerSettings();
-            _checkBannerBlockCoroutine ??= _coroutine.StartCoroutine(WaitDisplayPermission());
+            if (_displayBannerCoroutine != null)
+            {
+                _coroutine.StopCoroutine(_displayBannerCoroutine);
+                _displayBannerCoroutine = null;
+            }
+
+            if (AdIsLoaded())
+                DestroyAd();
         }
 
         private IEnumerator WaitDisplayPermission()
         {
-            while (_adBlockers.Any(b => b.DisplayBlocked == true))
+            while (_adBlockers.Any(b => b.BannerDisplayBlocked == true))
                 yield return new WaitForSeconds(CheckBlockedDelay);
 
             _adBlockers.Clear();
+            _bannerSuspended = false;
 
             Show(_placeOnScreen);
             _checkBannerBlockCoroutine = null;
@@ -140,12 +192,18 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             while (AdIsLoaded() == false)
                 yield return new WaitForSeconds(RetryLoadAdDelay);
 
+            while (_adBlockers.Any(b => b.BannerDisplayBlocked == true))
+                yield return new WaitForSeconds(CheckBlockedDelay);
+
+            _adBlockers.Clear();
+            _bannerSuspended = false;
+
             ShowAd();
             _displayBannerCoroutine = null;
         }
 
         private
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
         PlaceOnScreen
 #elif YABBI_AD
         int
@@ -154,7 +212,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #endif
         DeterminePosition() => _placeOnScreen switch
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             PlaceOnScreen.TopCenter => PlaceOnScreen.TopCenter,
             _ => PlaceOnScreen.BottomCenter,
 #elif YABBI_AD
@@ -175,8 +233,8 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         private void SetBannerSettings()
         {
-#if UNITY_EDITOR
-            Debug.Log("Advertisement Info: banner settings setted.");
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
+            Debug.Log("Advertisement Plugin: banner settings setted.");
 #elif YABBI_AD
             Yabbi.SetBannerCustomSettings(new BannerSettings().SetRefreshIntervalSeconds(_switchADTime).SetShowCloseButton(_bannerCloseButtonVisibility).SetBannerPosition(DeterminePosition()));
 #elif YANDEX_AD
@@ -186,10 +244,10 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override string GetPlacementName()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             return AdvertisingSettings.EditorTest.Test;
 #elif YABBI_AD
-            return AdvertisingSettings.YabbiAds.yabbiBannerUnitID;
+            return _advertisingConfigs.BannerUnitID;
 #elif YANDEX_AD
             return AdvertisingSettings.YandexAds.Release.BannerUnitId;
 #endif
@@ -197,7 +255,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool CanLoadAd()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             return true;
 #elif YABBI_AD
             return Yabbi.CanLoadAd(GetAdType(), GetPlacementName());
@@ -226,7 +284,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool AdIsLoaded()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             return true;
 #elif YABBI_AD
             return Yabbi.IsAdLoaded(GetAdType(), GetPlacementName());
@@ -262,16 +320,22 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                 _bannerLoaded = false;
             }
 #endif
+            _bannerShown = false;
+            BannerHided?.Invoke();
         }
 
         #region YABBI_AD
 #if YABBI_AD
         public void OnBannerLoaded(AdPayload adPayload) { }
         public void OnBannerLoadFailed(AdPayload adPayload, AdException error) { }
-        public void OnBannerShown(AdPayload adPayload) => _bannerDisplayed = true;
+        public void OnBannerShown(AdPayload adPayload) { }
         public void OnBannerShowFailed(AdPayload adPayload, AdException error) { }
         public void OnBannerClosed(AdPayload adPayload) { }
-        public void OnBannerImpression(AdPayload adPayload) { }
+        public void OnBannerImpression(AdPayload adPayload)
+        {
+            _bannerShown = true;
+            BannerDisplayed?.Invoke();
+        }
 
         private int GetAdType() => Yabbi.Banner;
 #endif
@@ -286,7 +350,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private void HandleReturnedToApplication(object sender, EventArgs args) { }
         private void HandleAdLeftApplication(object sender, EventArgs args) { }
         private void HandleAdClicked(object sender, EventArgs args) { }
-        private void HandleImpression(object sender, ImpressionData impressionData) => _bannerDisplayed = true;
+
+        private void HandleImpression(object sender, ImpressionData impressionData)
+        {
+            _bannerDisplayed = true;
+            BannerDisplayed?.Invoke();
+        }
 #endif
         #endregion
     }

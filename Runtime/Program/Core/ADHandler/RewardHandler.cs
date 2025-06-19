@@ -20,11 +20,13 @@ namespace KinDzaDzaGames.AdvertisementPlugin
     {
         private const string ViewedAds = nameof(ViewedAds);
 
+        private readonly AdvertisingConfigs _advertisingConfigs;
         private readonly bool _canShowRewards = false;
         private readonly int _rewardsMaxCount = 0;
 
         private int _rewardsCount = 0;
         private bool _rewardReceived = false;
+        private bool _AdShown = false;
         private Action _preRewardAction;
         private Action _rewardSuccessAction;
         private Action _rewardFailureAction;
@@ -34,14 +36,16 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private RewardedAd _rewardedAd;
 #endif
 
-        public RewardHandler(RewardSettings rewardSettings)
+        public RewardHandler(AdvertisingConfigs advertisingConfigs, RewardSettings rewardSettings)
         {
+            _advertisingConfigs = advertisingConfigs ?? throw new ArgumentNullException(nameof(advertisingConfigs));
+
             _canShowRewards = rewardSettings.RewardAvailable;
             _rewardsMaxCount = rewardSettings.RewardCount;
             _rewardsCount = PlayerPrefs.GetInt(ViewedAds, 0);
 
-#if UNITY_EDITOR
-            Debug.Log("Advertisement Info: reward handler inited.");
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
+            Debug.Log("Advertisement Plugin: reward handler inited.");
 # elif YABBI_AD
             Yabbi.SetRewardedCallbacks(this);
 #elif YANDEX_AD
@@ -60,10 +64,25 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             DestroyAd();
         }
 
+        public void ChangeFocusState(bool focus)
+        {
+            if (focus && _AdShown)
+            {
+                DestroyAd();
+                CancelReward();
+            }
+        }
+
         public bool CanShow() => _canShowRewards && (_rewardsCount < _rewardsMaxCount || _rewardsMaxCount == 0);
 
         public void LoadAD(Action preRewardAction)
         {
+            if(AdIsLoaded())
+            {
+                preRewardAction?.Invoke();
+                return;
+            }
+
             if (CanLoadAd() == false)
                 return;
 
@@ -104,14 +123,15 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             _rewardSuccessAction = null;
             _rewardFailureAction = null;
             _rewardReceived = false;
+            _AdShown = false;
         }
 
         protected override string GetPlacementName()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             return AdvertisingSettings.EditorTest.Test;
 #elif YABBI_AD
-            return AdvertisingSettings.YabbiAds.yabbiRewardedUnitID;
+            return _advertisingConfigs.RewardedUnitID;
 #elif YANDEX_AD
             return AdvertisingSettings.YandexAds.Release.RewardUnitId;
 #endif
@@ -119,7 +139,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool CanLoadAd()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             return true;
 #elif YABBI_AD
             return Yabbi.CanLoadAd(GetAdType(), GetPlacementName());
@@ -139,7 +159,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override bool AdIsLoaded()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
             return true;
 #elif YABBI_AD
             return Yabbi.IsAdLoaded(GetAdType(), GetPlacementName());
@@ -150,7 +170,10 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         protected override void ShowAd()
         {
-#if YABBI_AD
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
+            ApplyReward();
+            CancelReward();
+#elif YABBI_AD
             Yabbi.ShowAd(GetAdType(), GetPlacementName());
 #elif YANDEX_AD
             _rewardedAd.OnAdClicked += HandleAdClicked;
@@ -186,12 +209,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         #region YABBI_AD
 #if YABBI_AD
         public void OnRewardedLoaded(AdPayload adPayload) => _preRewardAction?.Invoke();
-        public void OnRewardedLoadFailed(AdPayload adPayload, AdException error) => DropRewardActions();
-        public void OnRewardedShowFailed(AdPayload adPayload, AdException error) => DropRewardActions();
+        public void OnRewardedLoadFailed(AdPayload adPayload, AdException error) => CancelReward();
+        public void OnRewardedShowFailed(AdPayload adPayload, AdException error) => CancelReward();
         public void OnUserRewarded(AdPayload adPayload) => ApplyReward();
         public void OnRewardedClosed(AdPayload adPayload) => CancelReward();
 
-        public void OnRewardedShown(AdPayload adPayload) { }
+        public void OnRewardedShown(AdPayload adPayload) => _AdShown = true;
         public void OnRewardedVideoStarted(AdPayload adPayload) { }
         public void OnRewardedVideoCompleted(AdPayload adPayload) { }
 

@@ -2,9 +2,9 @@ using UnityEngine;
 using Newtonsoft.Json;
 using System.Collections;
 using UnityEngine.Scripting;
+using System.Threading.Tasks;
 using KinDzaDzaGames.AdvertisementPlugin.DTO;
 using KinDzaDzaGames.AdvertisementPlugin.Utility;
-using System.Threading.Tasks;
 
 namespace KinDzaDzaGames.AdvertisementPlugin
 {
@@ -22,13 +22,16 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #endif
 
         [SerializeField] private AdvertisementController _advertisementController;
-        [SerializeField] private InterstitialPlayer _interstitialPlayer;
-        [Tooltip("Remote reward data")]
+        [Header("Advertising configs")]
+        [SerializeField] private AdvertisingConfigs _advertisingConfigs;
+        [Header("Remote reward data")]
         [SerializeField] private RewardSettings _rewardSettings;
         [Tooltip("Server name remote data")]
         [SerializeField] private string _serverPath;
         [SerializeField] private Store _storeName;
         [SerializeField] private int _bundleId;
+        [Header("Application")]
+        [SerializeField] private bool _selfInit = false;
 
         private AdvertisementAPI _api;
         private AppData _appData;
@@ -42,6 +45,8 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private string _appId => Application.identifier;
 #endif
 
+        public bool IsPluginAvailable => _preloadService.IsPluginAvailable;
+
         private void OnEnable()
         {
             _advertisementController.InitializationFailed += OnInitializationFailed;
@@ -49,9 +54,9 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         private void Awake()
         {
-            StartCoroutine(Construct(vip: false, _bundleId, _storeName.ToString(), _appId, Platform));
+            if(_selfInit)
+                StartCoroutine(Construct(vip: false, _bundleId, _storeName.ToString(), _appId, Platform));
         }
-
 
         public IEnumerator Construct(bool vip, int bundleId, string storeName, string appId, string platform)
         {
@@ -69,15 +74,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             {
                 yield return GetRewardRemote();
 
-                _advertisementController.Construct(vip, _rewardSettings);
-                _interstitialPlayer.Construct(_advertisementController.InterstitialHandler);
+                _advertisementController.Construct(vip, _rewardSettings, _preloadService.Settings, _advertisingConfigs);
 
-                yield return new WaitUntil(() => _advertisementController.Initialized);
+                yield return new WaitUntil(() => _advertisementController.Initialized || _advertisementController.Breaked);
             }
-            else
-            {
-                _rewardSettings.Contruct(_rewardSettings.DefaultRewardCount, _rewardSettings.DefaultRewardAvailable, _rewardSettings.DefaultWinkPrice, _rewardSettings.DefaultTrialPeriodDays);
-            }
+
+            Debug.Log($"Advertisement Plugin: constructed. Plugin available = {_preloadService.IsPluginAvailable}, breaked = {_advertisementController.Breaked}");
         }
 
         private IEnumerator GetRewardRemote()
@@ -88,19 +90,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             Task<bool> availableTask = RemoteConfig.BoolRemoteConfig(_rewardSettings.RewardAvailableKey, _rewardSettings.DefaultRewardAvailable);
             yield return new WaitUntil(() => availableTask.IsCompleted);
 
-            Task<string> priceTask = RemoteConfig.StringRemoteConfig(_rewardSettings.WinkPriceKey, _rewardSettings.DefaultWinkPrice);
-            yield return new WaitUntil(() => priceTask.IsCompleted);
-
-            Task<string> trialTask = RemoteConfig.StringRemoteConfig(_rewardSettings.TrialPeriodDaysKey, _rewardSettings.DefaultTrialPeriodDays);
-            yield return new WaitUntil(() => trialTask.IsCompleted);
-
-            _rewardSettings.Contruct(countTask.Result, availableTask.Result, priceTask.Result, trialTask.Result);
+            _rewardSettings.Contruct(countTask.Result, availableTask.Result);
         }
 
         private void OnDisable()
         {
             _advertisementController.InitializationFailed -= OnInitializationFailed;
-            _interstitialPlayer.Dispose();
         }
 
         private void OnInitializationFailed()
