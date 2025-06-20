@@ -6,6 +6,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin.Editor
 
         public class YabbiAds
         {
+            public const string YabbiDefine = "YABBI_AD";
             public const string SspnetSDK = "SspnetSDK";
             public const string SspnetSDKEditor = "SspnetSDK.Editor";
             public const string YabbiSDK = "YabbiSDK";
@@ -18,7 +19,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin.Editor
 
         public class YandexAds
         {
-            
+            public const string YandexDefine = "YANDEX_AD";
+            public const string YandexSDK = "YandexSDK";
+            public const string YandexSDKEditor = "YandexSDK.Editor";
+            public const string FilePathYandexSDK = "Assets/YandexMobileAds/YandexSDK.asmdef";
+            public const string FilePathYandexSDKEditor = "Assets/YandexMobileAds/Editor/YandexSDK.Editor.asmdef";
         }
 
         public class ExcludePlatforms
