@@ -40,6 +40,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private Coroutine _reloadCoroutine = null;
         private List<IBannerBlocker> _adBlockers = new List<IBannerBlocker>();
         private bool _bannerLoaded = false;
+        private bool _bannerHidden = false;
 
 #if YANDEX_AD
         private Banner _banner;
@@ -109,6 +110,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                 }
 
                 _bannerSuspended = false;
+                _bannerHidden = false;
             }
 
             if (_bannerShown || _bannerSuspended)
@@ -134,6 +136,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             }
 
             _bannerSuspended = false;
+            _bannerHidden = true;
         }
 
         public void SuspendBanner(IBannerBlocker adBlocker)
@@ -142,6 +145,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                 return;
 
             _adBlockers.Add(adBlocker);
+            _bannerHidden = false;
             _bannerSuspended = true;
 
             if (_displayBannerCoroutine != null)
@@ -188,6 +192,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
             _adBlockers.Clear();
             _bannerSuspended = false;
+            _bannerHidden = false;
 
             Show(_placeOnScreen);
             _checkBannerBlockCoroutine = null;
@@ -208,6 +213,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
             _adBlockers.Clear();
             _bannerSuspended = false;
+            _bannerHidden = false;
 
             ShowAd();
             _displayBannerCoroutine = null;
@@ -368,7 +374,14 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         public void OnBannerShown(AdPayload adPayload)
         {
-            AdvertisementAnalyticsService.SendAdsShowSuccess(AdvertisementAnalyticsService.AdsType.Banner);
+            if (_adBlockers.Any(b => b.BannerDisplayBlocked == true) || _bannerHidden || _bannerSuspended)
+            {
+                DropAd();
+            }
+            else
+            {
+                AdvertisementAnalyticsService.SendAdsShowSuccess(AdvertisementAnalyticsService.AdsType.Banner);
+            }
         }
 
         public void OnBannerShowFailed(AdPayload adPayload, AdException error)
@@ -383,8 +396,16 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         public void OnBannerImpression(AdPayload adPayload)
         {
-            _bannerShown = true;
-            BannerDisplayed?.Invoke();
+            if (_adBlockers.Any(b => b.BannerDisplayBlocked == true) || _bannerHidden || _bannerSuspended)
+            {
+                DropAd();
+            }
+            else
+            {
+                AdvertisementAnalyticsService.SendAdsShowSuccess(AdvertisementAnalyticsService.AdsType.Banner);
+               _bannerShown = true;
+                BannerDisplayed?.Invoke();
+            }
         }
 
         private int GetAdType() => Yabbi.Banner;
