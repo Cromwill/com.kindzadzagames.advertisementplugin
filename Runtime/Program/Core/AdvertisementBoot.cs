@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 using KinDzaDzaGames.AdvertisementPlugin.DTO;
 using KinDzaDzaGames.AdvertisementPlugin.Utility;
 
+#if UNITY_EDITOR
+using KinDzaDzaGames.AdvertisementPlugin.Editor;
+#endif
+
 namespace KinDzaDzaGames.AdvertisementPlugin
 {
     [Preserve]
@@ -23,14 +27,19 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         [SerializeField] private AdvertisementController _advertisementController;
         [Header("Advertising configs")]
-        [SerializeField] private AdvertisingConfigs _advertisingConfigs;
+        [SerializeField] private AppName _appName;
+        [SerializeField] private Store _storeName;
+        [SerializeField
+#if UNITY_EDITOR
+            , ReadOnly
+#endif
+            ] private AdvertisingConfigs _advertisingConfigs;
         [Header("Remote reward data")]
         [SerializeField] private RewardSettings _rewardSettings;
         [Tooltip("Server name remote data")]
         [SerializeField] private string _serverPath;
-        [SerializeField] private Store _storeName;
-        [SerializeField] private int _bundleId;
         [Header("Application")]
+        [SerializeField] private int _bundleId;
         [SerializeField] private bool _selfInit = false;
 
         private AdvertisementAPI _api;
@@ -45,6 +54,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         private string _appId => Application.identifier;
 #endif
 
+        public AdvertisementController AdvertisementController => _advertisementController;
         public bool IsPluginAvailable => _preloadService.IsPluginAvailable;
 
         private void OnEnable()
@@ -106,5 +116,12 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         {
 
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            _advertisingConfigs = AdvertisementID.GetConfig(_appName, _storeName);
+        }
+#endif
     }
 }
