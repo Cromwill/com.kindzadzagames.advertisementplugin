@@ -8,10 +8,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin.Utility
         private static string _appPrivacyPolicyURL = "https://mt.media/privacy/";
         private static string _yabbiTestPublisherID = "65057899-a16a-4877-989b-38c432a7fa15";
         private static string _publisherID = "09146b04-16d4-11f0-beaa-076395a5c120";
+        private static string _yandexPublisherID = "not used";
 
-        public static AdvertisingConfigs GetConfig(AppName appName, Store store)
+        public static AdvertisingConfigs GetConfig(AppName appName, Store store, AdvertisingProvider advertisingProvider)
         {
-            if(GetStoreADSList(store).TryGetValue(appName, out AdvertisingConfigs advertisingConfigs))
+            if(GetStoreADSList(store, advertisingProvider).TryGetValue(appName, out AdvertisingConfigs advertisingConfigs))
             {
                 return advertisingConfigs;
             }
@@ -21,14 +22,14 @@ namespace KinDzaDzaGames.AdvertisementPlugin.Utility
             }
         }
 
-        private static Dictionary<AppName, AdvertisingConfigs> GetStoreADSList(Store store)
+        private static Dictionary<AppName, AdvertisingConfigs> GetStoreADSList(Store store, AdvertisingProvider advertisingProvider)
         {
             switch (store)
             {
                 case Store.test:
-                    return _testAdvertisementID;
+                    return advertisingProvider == AdvertisingProvider.YabbiAdvertisement ? _testAdvertisementID : _testYandexAdvertisementID;
                 case Store.Google:
-                    return _googleAdvertisementID;
+                    return advertisingProvider == AdvertisingProvider.YabbiAdvertisement ? _googleAdvertisementID : _googleYandexAdvertisementID;
                 case Store.AppStore:
                     return _appStoreAdvertisementID;
                 case Store.RuStore:
@@ -618,6 +619,164 @@ namespace KinDzaDzaGames.AdvertisementPlugin.Utility
                 }
             }
         };
-#endregion
+        #endregion
+
+#region Yandex AD IDs
+        private static Dictionary<AppName, AdvertisingConfigs> _testYandexAdvertisementID = new Dictionary<AppName, AdvertisingConfigs>()
+        {
+            {
+                AppName.TestYandexAD, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "demo-banner-yandex",
+                    InterstitialUnitID = "demo-interstitial-yandex",
+                    RewardedUnitID = "demo-rewarded-yandex",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            }
+        };
+        #endregion
+
+#region GooglePlay Yandex IDs
+        private static Dictionary<AppName, AdvertisingConfigs> _googleYandexAdvertisementID = new Dictionary<AppName, AdvertisingConfigs>()
+        {
+            {AppName.LeoAndTig, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.MishkiAdventure, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.MishkiInSpace, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.MishkiTrueFriend, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "R-M-17083797-1",
+                    InterstitialUnitID = "R-M-17083797-2",
+                    RewardedUnitID = "R-M-17083797-3",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.FairytalePatrolCafe, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.LeoAndTigTaiga, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.MishkiPlanetOfCreativity, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.MishkiBigConcert, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.FairytalePatrol, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.FairytalePatrolAdventure, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.MusicalPatrol, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.Multiknowledge, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.Papers, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.HeroesOfEnvell, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            },
+            {AppName.FourACube, new AdvertisingConfigs()
+                {
+                    PublisherID = _yandexPublisherID,
+                    BannerUnitID = "not inited in table",
+                    InterstitialUnitID = "not inited in table",
+                    RewardedUnitID = "not inited in table",
+                    AppPrivacyPolicyURL = _appPrivacyPolicyURL
+                }
+            }
+        };
+        #endregion
+
     }
 }

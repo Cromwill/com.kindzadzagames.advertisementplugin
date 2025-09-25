@@ -45,7 +45,14 @@ namespace KinDzaDzaGames.AdvertisementPlugin
         public bool Initialized { get; private set; } = false;
         public bool Breaked { get; private set; } = false;
         public bool BannerShown => _bannerHandler.BannerShown;
-        public bool WaitConcernPolicy => _userConsentScreen.NeedShowConsentScreen;
+
+#if UNITY_EDITOR && YABBI_AD == false && YANDEX_AD == false
+            public bool WaitConcernPolicy => _userConsentScreen.NeedShowConsentScreen;
+#elif YABBI_AD
+            public bool WaitConcernPolicy => _userConsentScreen.NeedShowConsentScreen;
+#elif YANDEX_AD
+        public bool WaitConcernPolicy => false;
+#endif
         public bool PolicyAccepted => _userConsentScreen.AgreementAccepted;
         public bool AgreementClosed => _userConsentScreen.AgreementClosed;
 
@@ -73,6 +80,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 #elif YANDEX_AD
             Debug.Log("Advertisement Plugin: start YANDEX service.");
             MobileAds.SetAgeRestrictedUser(true);
+            MobileAds.SetUserConsent(true);
             OnInitializeSuccess();
 #endif
         }
@@ -93,6 +101,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
         private void OnApplicationFocus(bool focus)
         {
+#if YABBI_AD
             if (Initialized)
             {
                 _interstitialHandler.ChangeFocusState(focus);
@@ -103,6 +112,7 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                     _userConsentScreen.CloseConcernScreen();
 #endif
             }
+#endif
         }
 
         public void OnInitializeSuccess()
