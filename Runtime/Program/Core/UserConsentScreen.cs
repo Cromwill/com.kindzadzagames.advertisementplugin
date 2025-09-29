@@ -78,7 +78,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin
             }
             else
             {
-                _appImage.sprite = _appIcon;
+                if(_appIcon == null)
+                    _appImage.gameObject.SetActive(false);
+                else
+                    _appImage.sprite = _appIcon;
+
                 _appLabelText.text = Application.productName;
                 _appPrivacyPolicy.Initialize("appPrivacyPolicy", appPrivacyPolicy);
                 _yandexPrivacyPolicy.Initialize("yandexPrivacyPolicy", YandexPP);
