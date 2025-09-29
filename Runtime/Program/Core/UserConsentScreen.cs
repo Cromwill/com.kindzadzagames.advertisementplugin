@@ -93,9 +93,11 @@ namespace KinDzaDzaGames.AdvertisementPlugin
                 _canvasGroup.blocksRaycasts = true;
             }
         }
+#endif
 
         public void Dispose()
         {
+#if YANDEX_AD || UNITY_EDITOR
             if (AgreementAccepted)
                 return;
 
@@ -103,8 +105,8 @@ namespace KinDzaDzaGames.AdvertisementPlugin
 
             for (int i = 0; i < _disagreeButtons.Count; i++)
                 _disagreeButtons[i].onClick.RemoveListener(CloseYandexConcern);
-        }
 #endif
+        }
 
         public void OnConsentWindowClosed(bool hasConsent)
         {
