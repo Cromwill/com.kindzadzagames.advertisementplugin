@@ -22,5 +22,8 @@ namespace KinDzaDzaGames.AdvertisementPlugin.Utility
         ThreeCatsAdventure,
         ThreeCatsRacing,
         ThreeCatsPuzzles,
+        None,
+        Kubokot,
+        LogicLike,
     }
 }
